@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>L'Arbre des engagements durables</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Police -->
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet" />
+
+  <!-- jsPDF + html2canvas -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --primary: #2f855a;
+      --primary-soft: #c6f6d5;
+      --secondary: #2b6cb0;
+      --text: #1a202c;
+      --muted: #718096;
+      --accent: #ed8936;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Montserrat", sans-serif;
+      background: radial-gradient(circle at top, #e6fffa 0, #f1f5f9 45%, #e2e8f0 100%);
+      color: var(--text);
+    }
+
+    .container {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 20px 14px 40px;
+    }
+
+    h1 {
+      text-align: center;
+      margin: 6px 0 4px;
+      font-weight: 600;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: var(--muted);
+      margin-bottom: 18px;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 14px;
+      padding: 18px 18px 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      background: #edfdf7;
+      color: #276749;
+      margin-bottom: 8px;
+    }
+
+    .hidden { display: none; }
+
+    button {
+      border: none;
+      border-radius: 999px;
+      padding: 9px 20px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    button.primary {
+      background: linear-gradient(135deg, #2f855a, #38a169);
+      color: white;
+    }
+
+    button.secondary {
+      background: #e2e8f0;
+      color: #2d3748;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+    }
+
+    .btn-row {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .btn-row.center {
+      justify-content: center;
+    }
+
+    select, textarea, input {
+      width: 100%;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid #cbd5e0;
+      font-family: inherit;
+      font-size: 0.9rem;
+    }
+
+    textarea { min-height: 60px; }
+
+    .tree-layout {
+      display: grid;
+      grid-template-columns: 1.3fr 1fr;
+      gap: 14px;
+    }
+
+    @media (max-width: 780px) {
+      .tree-layout { grid-template-columns: 1fr; }
+    }
+
+    .tree-wrapper {
+      border-radius: 16px;
+      padding: 10px;
+      background: radial-gradient(circle at top, #e6fffa 0, #f0fff4 40%, #edf2f7 100%);
+      border: 1px solid #9ae6b4;
+    }
+
+    .leaf-pop {
+      animation: leafPop 0.45s ease-out;
+    }
+
+    @keyframes leafPop {
+      0% { transform: scale(0); opacity: 0; }
+      60% { transform: scale(1.15); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .summary-box {
+      background: #f8fafc;
+      border-radius: 14px;
+      padding: 12px;
+      border: 1px solid #e2e8f0;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+
+    <h1>L'Arbre des engagements durables</h1>
+    <p class="subtitle">Formulez trois engagements, faites pousser votre arbre, puis téléchargez votre plan d’action.</p>
+
+    <!-- ÉTAPE 1 -->
+    <section id="step-1" class="card">
+      <div class="badge">Étape 1 · Découverte</div>
+      <h2>Un arbre pour visualiser vos engagements</h2>
+      <p>Chaque feuille représentera un engagement concret que vous choisissez aujourd’hui.</p>
+      <div class="btn-row center">
+        <button class="primary" onclick="goToStep(2)">Je commence 🌱</button>
+      </div>
+    </section>
+
+    <!-- ÉTAPE 2 -->
+    <section id="step-2" class="card hidden">
+      <div class="badge">Étape 2 · Mes engagements</div>
+      <h2>Formulez vos engagements</h2>
+
+      <div id="engagements"></div>
+
+      <script>
+        const domains = [
+          "Énergie", "Déchets", "Mobilité", "Alimentation",
+          "Numérique", "Eau", "Biodiversité", "Consommation responsable"
+        ];
+
+        const examplesByDomain = {
+          "Énergie": [
+            "Baisser le chauffage d’1°C.",
+            "Éteindre mes appareils au lieu de les laisser en veille.",
+            "Passer aux ampoules LED.",
+            "Limiter la climatisation.",
+            "Débrancher les chargeurs inutilisés.",
+            "Fermer les volets la nuit pour conserver la chaleur.",
+            "Utiliser un programmateur pour le chauffage.",
+            "Réduire l’usage du sèche-linge.",
+            "Optimiser la température du chauffe-eau.",
+            "Faire un diagnostic énergétique."
+          ],
+
+          "Déchets": [
+            "Acheter en vrac.",
+            "Composter mes déchets organiques.",
+            "Réparer avant de remplacer.",
+            "Réduire les emballages.",
+            "Utiliser une gourde.",
+            "Limiter les impressions papier.",
+            "Donner les objets inutilisés.",
+            "Choisir des produits rechargeables.",
+            "Utiliser des sacs réutilisables.",
+            "Faire mes produits ménagers maison."
+          ],
+
+          "Mobilité": [
+            "Remplacer un trajet voiture par un trajet vélo.",
+            "Covoiturer une fois par semaine.",
+            "Prendre les transports en commun.",
+            "Regrouper mes déplacements.",
+            "Marcher pour les trajets courts.",
+            "Télétravailler un jour par semaine.",
+            "Entretenir mes pneus.",
+            "Limiter les trajets aux heures de pointe.",
+            "Planifier mes déplacements.",
+            "Utiliser un service de location de vélo."
+          ],
+
+          "Alimentation": [
+            "Manger local une fois par semaine.",
+            "Réduire le gaspillage alimentaire.",
+            "Introduire un repas végétarien.",
+            "Privilégier les produits de saison.",
+            "Faire une liste de courses.",
+            "Cuisiner davantage maison.",
+            "Acheter en circuits courts.",
+            "Réduire les produits ultra-transformés.",
+            "Congeler les restes.",
+            "Choisir des produits bio."
+          ],
+
+          "Numérique": [
+            "Trier mes mails une fois par mois.",
+            "Réduire les pièces jointes lourdes.",
+            "Réparer mon smartphone.",
+            "Limiter le streaming HD.",
+            "Désinstaller les applications inutiles.",
+            "Éteindre ma box la nuit.",
+            "Limiter les onglets ouverts.",
+            "Stocker mes fichiers localement.",
+            "Nettoyer mon ordinateur.",
+            "Utiliser un moteur de recherche écoresponsable."
+          ],
+
+          "Eau": [
+            "Réduire ma durée de douche.",
+            "Installer un mousseur.",
+            "Récupérer l’eau froide avant la douche.",
+            "Ne pas laisser couler l’eau.",
+            "Lancer la machine pleine.",
+            "Installer une chasse d’eau double débit.",
+            "Arroser mes plantes le soir.",
+            "Réparer les fuites.",
+            "Utiliser un minuteur sous la douche.",
+            "Privilégier le lave-vaisselle."
+          ],
+
+          "Biodiversité": [
+            "Planter des espèces locales.",
+            "Installer un hôtel à insectes.",
+            "Éviter les produits phytosanitaires.",
+            "Laisser une zone sauvage.",
+            "Participer à un nettoyage de la nature.",
+            "Installer un nichoir.",
+            "Planter des fleurs mellifères.",
+            "Créer une petite mare.",
+            "Protéger les haies.",
+            "Limiter l’éclairage nocturne."
+          ],
+
+          "Consommation responsable": [
+            "Acheter d’occasion.",
+            "Privilégier les produits labellisés.",
+            "Réduire mes achats non essentiels.",
+            "Louer plutôt qu’acheter.",
+            "Favoriser les commerces locaux.",
+            "Choisir des produits durables.",
+            "Éviter les promotions trompeuses.",
+            "Acheter moins mais mieux.",
+            "Vérifier l’origine des produits.",
+            "Réduire les achats en ligne."
+          ]
+        };
+
+        function createEngagementFields() {
+          const container = document.getElementById("engagements");
+          container.innerHTML = "";
+
+          for (let i = 1; i <= 3; i++) {
+            container.innerHTML += `
+              <div class="engagement-block">
+                <h3>Engagement n°${i}</h3>
+
+                <label>Domaine</label>
+                <select id="domain${i}" onchange="updateExamples(${i})">
+                  <option value="">Sélectionnez un domaine</option>
+                  ${domains.map(d => `<option>${d}</option>`).join("")}
+                </select>
+
+                <label>Exemple (optionnel)</label>
+                <select id="example${i}" onchange="applyExample(${i})">
+                  <option value="">Choisissez un exemple</option>
+                </select>
+
+                <label>Mon action</label>
+                <textarea id="engagement${i}" placeholder="Décrivez votre action..."></textarea>
+              </div>
+            `;
+          }
+        }
+
+        createEngagementFields();
+
+        function updateExamples(i) {
+          const domain = document.getElementById("domain" + i).value;
+          const exampleSelect = document.getElementById("example" + i);
+          exampleSelect.innerHTML = `<option value="">Choisissez un exemple</option>`;
+
+          if (examplesByDomain[domain]) {
+            examplesByDomain[domain].forEach(ex => {
+              exampleSelect.innerHTML += `<option>${ex}</option>`;
+            });
+          }
+        }
+
+        function applyExample(i) {
+          const ex = document.getElementById("example" + i).value;
+          if (ex) document.getElementById("engagement" + i).value = ex;
+        }
+      </script>
+
+      <div class="btn-row">
+        <button class="secondary" onclick="goToStep(1)">◀ Retour</button>
+        <button class="primary" onclick="validateEngagements()">Faire pousser mon arbre 🌳</button>
+      </div>
+    </section>
+
+    <!-- ÉTAPE 3 -->
+    <section id="step-3" class="card hidden">
+      <div class="badge">Étape 3 · Visualisation</div>
+      <h2>Votre arbre des engagements</h2>
+
+      <div class="tree-layout">
+        <div class="tree-wrapper" id="tree-wrapper">
+          <svg id="engagementTree" viewBox="0 0 300 260"></svg>
+        </div>
+
+        <div>
+          <h3>Détail de mes engagements</h3>
+          <div id="engagementSummary" class="summary-box"></div>
+
+          <label>Votre nom (facultatif)</label>
+          <input id="participantName" />
+
+          <label>Contexte (facultatif)</label>
+          <input id="context" />
+
+          <div class="btn-row">
+            <button class="secondary" onclick="goToStep(2)">◀ Modifier</button>
+            <button class="primary" onclick="generatePDF()">Télécharger le PDF</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <script>
+    function goToStep(n) {
+      document.querySelectorAll("section").forEach(s => s.classList.add("hidden"));
+      document.getElementById("step-" + n).classList.remove("hidden");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function getEngagements() {
+      return [
+        { domain: domain1.value, text: engagement1.value },
+        { domain: domain2.value, text: engagement2.value },
+        { domain: domain3.value, text: engagement3.value }
+      ];
+    }
+
+    function validateEngagements() {
+      const data = getEngagements();
+      for (let i = 0; i < data.length; i++) {
+        if (!data[i].domain || !data[i].text) {
+          alert("Merci de compléter l’engagement n°" + (i + 1));
+          return;
+        }
+      }
+      drawTree(data);
+      showSummary(data);
+      goToStep(3);
+    }
+
+    function drawTree(data) {
+      const svg = document.getElementById("engagementTree");
+      svg.innerHTML = "";
+
+      svg.innerHTML += `
+        <ellipse cx="150" cy="240" rx="95" ry="16" fill="#c6f6d5"></ellipse>
+        <rect x="138" y="140" width="24" height="85" rx="12" fill="#744210"></rect>
+        <path d="M150 150 L95 120" stroke="#744210" stroke-width="7" stroke-linecap="round" />
+        <path d="M150 145 L205 115" stroke="#744210" stroke-width="7" stroke-linecap="round" />
+        <path d="M150 135 L150 95" stroke="#744210" stroke-width="7" stroke-linecap="round" />
+        <ellipse cx="150" cy="105" rx="70" ry="50" fill="#9ae6b4" opacity="0.35" />
+      `;
+
+      const positions = [
+        { x: 90, y: 115, color: "#48bb78" },
+        { x: 210, y: 110, color: "#68d391" },
+        { x: 150, y: 80, color: "#38b2ac" }
+      ];
+
+      data.forEach((item, i) => {
+        const short = item.text.length > 32 ? item.text.slice(0, 31) + "…" : item.text;
+
+        svg.innerHTML += `
+          <g class="leaf leaf-pop">
+            <ellipse cx="${positions[i].x}" cy="${positions[i].y}" rx="36" ry="24" fill="${positions[i].color}"></ellipse>
+            <text x="${positions[i].x}" y="${positions[i].y}" text-anchor="middle" dominant-baseline="middle"
+                  fill="white" font-size="8" font-family="Montserrat">${short}</text>
+          </g>
+        `;
+      });
+    }
+
+    function showSummary(data) {
+      const box = document.getElementById("engagementSummary");
+      box.innerHTML = "";
+      data.forEach((item, i) => {
+        box.innerHTML += `<p><strong>Engagement ${i + 1} – ${item.domain} :</strong><br>${item.text}</p>`;
+      });
+    }
+
+    async function generatePDF() {
+      const treeWrapper = document.getElementById("tree-wrapper");
+      const name = participantName.value.trim();
+      const context = document.getElementById("context").value.trim();
+      const data = getEngagements();
+      const dateStr = new Date().toLocaleDateString("fr-FR");
+
+      const canvas = await html2canvas(treeWrapper, { backgroundColor: null, scale: 2 });
+      const imgData = canvas.toDataURL("image/png");
+
+      const jsPDF = window.jspdf.jsPDF || window.jspdf.default.jsPDF;
+
+      const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      let y = 15;
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(18);
+      doc.text("Plan d’action – Mes engagements durables", 14, y);
+      y += 10;
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+      doc.text("Date : " + dateStr, 14, y);
+      y += 6;
+
+      if (name) { doc.text("Participant : " + name, 14, y); y += 6; }
+      if (context) { doc.text("Contexte : " + context, 14, y); y += 6; }
+
+y += 4;
+      if (context) { doc.text("Contexte : " + context, 14, y); y += 6; }
+
+      y += 4;
+
+      const imgWidth = pageWidth - 28;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      doc.addImage(imgData, "PNG", 14, y, imgWidth, imgHeight);
+      y += imgHeight + 10;
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(13);
+      doc.text("Mes engagements détaillés", 14, y);
+      y += 8;
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+
+      data.forEach((item, i) => {
+        doc.text(`Engagement ${i + 1} – ${item.domain}`, 14, y);
+        y += 5;
+        const lines = doc.splitTextToSize(item.text, pageWidth - 24);
+        doc.text(lines, 18, y);
+        y += lines.length * 5 + 4;
+      });
+
+      doc.save("plan_action.pdf");
+    }
+  </script>
+</body>
+</html>
